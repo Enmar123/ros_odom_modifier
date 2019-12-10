@@ -5,41 +5,15 @@
 #include <tf2_msgs/TFMessage.h>
 #include <iostream>
 
-using namespace std;
-
-static ros::Publisher pub;
-
-
-void callback(const nav_msgs::Odometry msg){
-
-  //geometry_msgs::TransformStamped transform;
-  tf2_msgs::TFMessage transforms;
-
-  cout << "marker 1" << endl;
-
-  //transforms.transforms.assign(0, 0); // First and last iterator (size of array)
-
-  transforms.transforms.begin()->header = msg.header;
-  cout << "maker 1.5" << endl;
-  transforms.transforms.begin()->child_frame_id = "encoder_odom";
-  transforms.transforms.begin()->transform.translation.x = msg.pose.pose.position.x;
-  transforms.transforms.begin()->transform.translation.y = msg.pose.pose.position.y;
-  transforms.transforms.begin()->transform.translation.z = msg.pose.pose.position.z;
-  transforms.transforms.begin()->transform.rotation      = msg.pose.pose.orientation;
-
-//  transforms.transforms[0].header = msg.header;
-//  transforms.transforms[0].child_frame_id = "encoder_odom";
-//  transforms.transforms[0].transform.translation.x = msg.pose.pose.position.x;
-//  transforms.transforms[0].transform.translation.y = msg.pose.pose.position.y;
-//  transforms.transforms[0].transform.translation.z = msg.pose.pose.position.z;
-//  transforms.transforms[0].transform.rotation      = msg.pose.pose.orientation;
-
-  cout << "marker 2" << endl;
-
-  pub.publish(transforms);
+ros::NodeHandle *getNodeHandle() {
+  static ros::NodeHandle *nh = nullptr;
+  if ( !nh )
+    nh = new ros::NodeHandle("~");
+  return nh;
 }
 
-void callback2(const nav_msgs::Odometry msg){
+void callback(const nav_msgs::Odometry msg) {
+  auto nh = getNodeHandle();
   static tf::TransformBroadcaster br;
 
   tf::Transform transform;
@@ -55,19 +29,31 @@ void callback2(const nav_msgs::Odometry msg){
   q.setZ( msg.pose.pose.orientation.z );
   transform.setRotation(q);
 
-  br.sendTransform( tf::StampedTransform( transform, ros::Time::now(), "ekf_odom", "encoder_odom" ));
+  std::string frame_id, child_frame_id;
+
+  nh->param("frame_id", frame_id, msg.header.frame_id);
+  nh->param("child_frame_id", child_frame_id, msg.child_frame_id);
+
+  br.sendTransform( tf::StampedTransform( transform, ros::Time::now(),
+                                          frame_id, child_frame_id ) );
 }
 
-
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
   ros::init(argc, argv, "odom_to_tf");
-  ros::NodeHandle nh;
+  auto nh = getNodeHandle();
+
+  std::string odom_topic_in;
+
+  if (nh->getParam("odom_topic_in", odom_topic_in))
+      ROS_INFO("Got param: %s", odom_topic_in.c_str());
+  else
+    ROS_ERROR("Failed to get param 'odom_topic_in'");
 
   ROS_INFO("Starting Node: odom_to_tf");
-  pub = nh.advertise<tf2_msgs::TFMessage>("tf", 10);
-  ros::Subscriber sub = nh.subscribe<nav_msgs::Odometry>( "jackal_velocity_controller/odom", 10, callback2 );
+  ros::Subscriber sub = nh->subscribe<nav_msgs::Odometry>( odom_topic_in, 10, callback );
 
   ros::spin();
+
+  delete nh;
   return 0;
 }

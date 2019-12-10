@@ -3,8 +3,12 @@ Converts your odom message to a /tf
 -->
 
 <launch>
-  <node name="odom_modifier" pkg="odom_modifier" type="odom_to_tf" >
+  <node name="odom_to_tf" pkg="odom_modifier" type="odom_to_tf" >
     <param name="odom_topic_in"       value="/jackal_velocity_controller/odom" />
 
+    <!-- OPTIONAL -->
+    <param name="frame_id"            value="/ekf_odom" />
+    <param name="child_frame_id"      value="/encoder_odom" />
+    
   </node>
 </launch>
