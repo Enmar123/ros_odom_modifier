@@ -1,0 +1,12 @@
+<!--
+Launch file for testing purposes
+-->
+
+<launch>
+
+  <node name="odom_modifier" pkg="odom_modifier" type="odom_modifier.py" >
+    <param name="odom_topic_in"       value="/jackal_velocity_controller/odom" />        
+    <param name="odom_topic_out"      value="modified/jackal/odom" />
+
+  </node>
+</launch>
